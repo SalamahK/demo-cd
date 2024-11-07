@@ -1,6 +1,6 @@
 # This is a basic workflow to help you get started with Actions
 
-name: CI with Scandium
+name: CI with Scandium Suite
 
 # Controls when the workflow will run
 on:
@@ -15,8 +15,8 @@ on:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
-  build:
+  # This workflow contains a job called "test-suite"
+  test-suite:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
 
@@ -25,22 +25,22 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v3
 
-      - name: Run Scandium Test
+      - name: Run Scandium Test Suite
         run: |
-          response=$(curl -X POST -H "Content-Type: application/json" -H "x-api-token: 2DzWQDTnUypocm0tNkzHIubrJUb4ZF" -d '{"project_id": "9cb7b1b6-2626-4727-8dca-3d883e956f05", "suite_id": "9d6e7451-fed6-440f-b286-4996a2534436", "browser": "chrome","screenshot": true,"strategy": "await","variables": {"username": "sdk", "age": 11},"retry": 0}' "https://scr.getscandium.com/suites/execute")
-          status=$(echo "$response" | jq -r .data.result.status)
+          response=$(curl -X POST -H "Content-Type: application/json" -H "x-api-token: 2DzWQDTnUypocm0tNkzHIubrJUb4ZF" -d '{"project_id": "9cb7b1b6-2626-4727-8dca-3d883e956f05", "suite_id": "9d6e7451-fed6-440f-b286-4996a2534436","browser": "chrome","screenshot": true,"strategy": "await","variables": {"username": "sdk", "age": 11},"retry": 0}' "https://scr.getscandium.com/suites/execute")
+          execution_status=$(echo "$response" | jq -r '.data.executions[0].running_status')
+          total_passed=$(echo "$response" | jq -r '.data.executions[0].summary.passed')
+          total_failed=$(echo "$response" | jq -r '.data.executions[0].summary.failed')
           message=$(echo "$response" | jq -r .message)
 
-          if [ "$status" = "success" ]; then
-            echo "Test ran successfully. Status: $status"
+          if [ "$execution_status" = "completed" ] && [ "$total_failed" -eq 0 ]; then
+            echo "Test suite ran successfully. Status: $execution_status"
+            echo "Passed tests: $total_passed"
           else
-            echo "Test ran with failure. Status: $status"
+            echo "Test suite ran with issues. Status: $execution_status"
+            echo "Failed tests: $total_failed"
+            echo "Message: $message"
             exit 1
           fi
         env:
           CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt # Set the CA certificates bundle path
-
-      # - name: Install jq
-      #   run: |
-      #     sudo apt-get update -y
-      #     sudo apt-get install -y jq
